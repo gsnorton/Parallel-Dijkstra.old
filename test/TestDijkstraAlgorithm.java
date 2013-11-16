@@ -64,16 +64,20 @@ public class TestDijkstraAlgorithm {
 		for (int n = 0; n < 100; n++) {
 			source = rand.nextInt(x*y);
 			dijkstra.execute(source);
-			start = rand.nextInt(x*y); 
+			
+			start = source;
+			while (start == source)
+				start = rand.nextInt(x*y);
+			
 			path = dijkstra.getPath(start);
 		}
 
 		dijkstra.terminate();
 		
+		System.out.println(start + " to " + source);
+		
 		assertNotNull(path);
 		assertTrue(path.size() > 0);
-		
-		System.out.println(start + " to " + source);
 		
 		for (Vertex vertex : path) {
 			System.out.println(vertex);
