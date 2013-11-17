@@ -40,7 +40,7 @@ import dijkstra.model.Vertex;
 
 public class DijkstraAlgorithm {
 	
-	private static final int MAX_PROCESSING_SPLIT_COUNT = 0;
+	private static final int MAX_PROCESSING_SPLIT_COUNT = 1;
 	
 	private Set<Vertex> settled_nodes;
 	private Map<Vertex, Vertex> predecessors;
@@ -211,10 +211,17 @@ public class DijkstraAlgorithm {
 		
 		@Override
 		public void compute() {
-			boolean reexecuting = !inForkJoinPool();
-			
 			is_active = true;
-						
+	
+			/* The method is considered to be in the reexecuting state if 
+			 * called by a thread outside of the fork/join pool. What we
+			 * want to take place in that situation is to fall through to
+			 * the cyclic barrier below and trigger the leaf nodes to
+			 * run the algorithm.
+			 */
+			
+			boolean reexecuting = !inForkJoinPool();
+									
 			while (true) {
 				
 				/* Skip this section if we are reentering the compute() to
@@ -223,7 +230,7 @@ public class DijkstraAlgorithm {
 				
 				if(false == reexecuting) {
 					if (leaf_task) {
-
+						
 						/* Leaf task */
 
 						processWinnerAndUnsettledNodes();
@@ -238,7 +245,7 @@ public class DijkstraAlgorithm {
 						/* Branch task */
 						
 						pt1.fork();
-						pt2.fork();
+						pt2.compute();
 
 						break;
 					}
@@ -369,10 +376,10 @@ public class DijkstraAlgorithm {
 	}
 	
 	public void terminate() {
-		for(ProcessingTask pt : processing_tasks)
-			pt.cancel(true);
-		
 		winner = null;
 		root_processing_task = null;
+		
+		for(ProcessingTask pt : processing_tasks)
+			pt.cancel(true);
 	}
 }
