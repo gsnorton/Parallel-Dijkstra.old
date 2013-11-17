@@ -40,7 +40,7 @@ import dijkstra.model.Vertex;
 
 public class DijkstraAlgorithm {
 	
-	private static final int MAX_PROCESSING_SPLIT_COUNT = 1;
+	private static final int MAX_PROCESSING_SPLIT_COUNT = 0;
 	
 	private Set<Vertex> settled_nodes;
 	private Map<Vertex, Vertex> predecessors;
@@ -70,7 +70,7 @@ public class DijkstraAlgorithm {
 	private CyclicBarrier reexecute_task_barrier;
 
 	private int leaf_processing_task_count;
-	private int processing_split_count;
+	private int leaf_processing_sync_count;
 	
 	private class ProcessingTask extends RecursiveAction {
 		
@@ -84,21 +84,21 @@ public class DijkstraAlgorithm {
 		
 		boolean leaf_task = true;
 		
-		public ProcessingTask(final Map<Vertex, List<Edge>> adjacencies) {
-			
-			if(processing_split_count < MAX_PROCESSING_SPLIT_COUNT) {
-				processing_split_count += 1;
-				
+		public ProcessingTask(final Map<Vertex, List<Edge>> adjacencies,
+				final int level) {
+
+			if(level < MAX_PROCESSING_SPLIT_COUNT) {
+								
 				List<Map<Vertex, List<Edge>>> split_adjacencies =
 						Graph.splitAdjacencies(adjacencies);
 				
-				pt1 = new ProcessingTask(split_adjacencies.get(0));
-				pt2 = new ProcessingTask(split_adjacencies.get(1));
-				
+				pt1 = new ProcessingTask(split_adjacencies.get(0), level + 1);
+				pt2 = new ProcessingTask(split_adjacencies.get(1), level + 1);
+
 				leaf_task = false;
 				
 			} else {
-				this.adjacencies = adjacencies;
+				this.adjacencies = adjacencies;				
 			}
 			
 			distances_from_source = new HashMap<Vertex, Integer>();
@@ -107,12 +107,15 @@ public class DijkstraAlgorithm {
 			if (leaf_task) {
 				leaf_processing_task_count += 1;
 				
+				leaf_processing_sync_count = leaf_processing_task_count;
+				
 				processing_task_barrier = 
 						new CyclicBarrier(leaf_processing_task_count,
 								query_tasks_for_winner);
 				
 				reexecute_task_barrier = 
-						new CyclicBarrier(leaf_processing_task_count + 1);
+						new CyclicBarrier(leaf_processing_task_count + 1,
+								reset_leaf_synchronization);
 			}
 			
 			processing_tasks.add(this);
@@ -246,14 +249,17 @@ public class DijkstraAlgorithm {
 						
 						pt1.fork();
 						pt2.compute();
-
-						break;
+												
+						break; /* Shouldn't see this, but just in case ... */
 					}
 				}
 								
 				/* Wait for reexecution triggered by calling compute() from
 				 * a thread outside the fork/join pool.
 				 */
+				
+				if(false == reexecuting) 
+					leaf_processing_sync_count += 1;
 				
 				try {
 					reexecute_task_barrier.await();
@@ -262,13 +268,18 @@ public class DijkstraAlgorithm {
 				} catch (BrokenBarrierException ex) {
 					return;
 				}
-				
+								
 				/* Reexecuting trigger? Return */
 				
-				if (reexecuting)
-					break;
+				if (reexecuting) break;
 			}
 		}
+		
+		private Runnable reset_leaf_synchronization = new Runnable() {
+			public void run() {
+				leaf_processing_sync_count = 0;
+			}
+		};
 
 		private void relax(final Vertex node, int dist_to_node) {
 			for (Vertex target : getNeighbors(node)) {
@@ -327,7 +338,7 @@ public class DijkstraAlgorithm {
 		global_unsettled_nodes = new ArrayList<UnsettledNode>();
 		
 		processing_tasks = new ArrayList<ProcessingTask>();
-		root_processing_task = new ProcessingTask(graph.getAdjacencies());
+		root_processing_task = new ProcessingTask(graph.getAdjacencies(), 0);
 	}
 
 	public void execute(final Vertex source) {
@@ -343,7 +354,9 @@ public class DijkstraAlgorithm {
 			else 
 				root_processing_task.compute();
 			
-			while(null != winner) Thread.yield();
+			while ((null != winner)
+					|| (leaf_processing_sync_count < leaf_processing_task_count))
+				Thread.yield();
 		}
 	}
 	
