@@ -13,6 +13,12 @@
  * 
  * HT for Fork/Join HowTo: http://www.javacodegeeks.com/2011/02/
  * 							 java-forkjoin-parallel-programming.html
+ * 
+ * HT for CyclicBarrier HowTo: http://www.javamex.com/tutorials/
+ * 								threads/CyclicBarrier_parallel_sort_2.shtml
+ * 
+ * HT for BlockingQueue HowTo: http://www.javamex.com/tutorials/
+ * 								synchronization_producer_consumer_2.shtml
  */
 
 package dijkstra.engine;
@@ -28,9 +34,11 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import jsr166y.ForkJoinPool;
 import jsr166y.RecursiveAction;
@@ -66,11 +74,14 @@ public class DijkstraAlgorithm {
 	private UnsettledNode winner;
 	
 	private List<ProcessingTask> processing_tasks;
+	
 	private CyclicBarrier processing_task_barrier;
 	private CyclicBarrier reexecute_task_barrier;
+	private CyclicBarrier leaves_done_barrier;
+	
+	private BlockingQueue<String> notify_queue;
 
 	private int leaf_processing_task_count;
-	private int leaf_processing_sync_count;
 	
 	private class ProcessingTask extends RecursiveAction {
 		
@@ -107,15 +118,16 @@ public class DijkstraAlgorithm {
 			if (leaf_task) {
 				leaf_processing_task_count += 1;
 				
-				leaf_processing_sync_count = leaf_processing_task_count;
-				
 				processing_task_barrier = 
 						new CyclicBarrier(leaf_processing_task_count,
 								query_tasks_for_winner);
 				
 				reexecute_task_barrier = 
-						new CyclicBarrier(leaf_processing_task_count + 1,
-								reset_leaf_synchronization);
+						new CyclicBarrier(leaf_processing_task_count + 1);
+				
+				leaves_done_barrier =
+						new CyclicBarrier(leaf_processing_task_count,
+								signal_leaves_done);
 			}
 			
 			processing_tasks.add(this);
@@ -253,13 +265,25 @@ public class DijkstraAlgorithm {
 						break; /* Shouldn't see this, but just in case ... */
 					}
 				}
-								
-				/* Wait for reexecution triggered by calling compute() from
-				 * a thread outside the fork/join pool.
+
+				/*
+				 * Wait for all of the leaves to reach this common point. This
+				 * will signal the completion of processing.
 				 */
 				
-				if(false == reexecuting) 
-					leaf_processing_sync_count += 1;
+				try {
+					if(false == reexecuting)
+						leaves_done_barrier.await();
+				} catch (InterruptedException ex) {
+					return;
+				} catch (BrokenBarrierException ex) {
+					return;
+				}
+				
+				/*
+				 * Wait for reexecution triggered by calling compute() from a
+				 * thread outside the fork/join pool.
+				 */
 				
 				try {
 					reexecute_task_barrier.await();
@@ -275,9 +299,13 @@ public class DijkstraAlgorithm {
 			}
 		}
 		
-		private Runnable reset_leaf_synchronization = new Runnable() {
+		private Runnable signal_leaves_done = new Runnable() {
 			public void run() {
-				leaf_processing_sync_count = 0;
+				try {
+					notify_queue.put("Ding! Fries are done");
+				} catch (Exception e) {
+					return;
+				}
 			}
 		};
 
@@ -339,6 +367,8 @@ public class DijkstraAlgorithm {
 		
 		processing_tasks = new ArrayList<ProcessingTask>();
 		root_processing_task = new ProcessingTask(graph.getAdjacencies(), 0);
+		
+		notify_queue = new LinkedBlockingQueue<String>();
 	}
 
 	public void execute(final Vertex source) {
@@ -354,9 +384,11 @@ public class DijkstraAlgorithm {
 			else 
 				root_processing_task.compute();
 			
-			while ((null != winner)
-					|| (leaf_processing_sync_count < leaf_processing_task_count))
-				Thread.yield();
+			try {
+				notify_queue.take();
+			} catch (Exception e) {
+				return;
+			}
 		}
 	}
 	
