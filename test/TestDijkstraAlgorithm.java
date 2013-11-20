@@ -20,7 +20,9 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
+import dijkstra.engine.ParallelDijkstraAlgorithm;
 import dijkstra.engine.DijkstraAlgorithm;
+
 import dijkstra.model.Edge;
 import dijkstra.model.Graph;
 import dijkstra.model.Vertex;
@@ -57,7 +59,12 @@ public class TestDijkstraAlgorithm {
 		List<Vertex> path = null;
 		
 		Graph graph = new Graph(nodes, edges);
-		DijkstraAlgorithm dijkstra = new DijkstraAlgorithm(graph);
+		
+		DijkstraAlgorithm dijkstra = 
+				new DijkstraAlgorithm(graph);
+		
+//		ParallelDijkstraAlgorithm dijkstra = 
+//			new ParallelDijkstraAlgorithm(graph);	
 			
 		int source = 0, start = x*y;
 		
@@ -71,8 +78,6 @@ public class TestDijkstraAlgorithm {
 			
 			path = dijkstra.getPath(start);
 		}
-
-		dijkstra.terminate();
 		
 		System.out.println(start + " to " + source);
 		
