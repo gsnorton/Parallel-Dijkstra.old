@@ -43,6 +43,17 @@ public class Graph {
 		return edges;
 	}
 	
+	public static final void addLane(List<Edge> edges, final List<Vertex> nodes, 
+			final int source, final int dest, final int cost) {
+		String laneId = String.format("Lane_%d_%d", source, dest);
+		Edge lane = new Edge(laneId, nodes.get(source), nodes.get(dest), cost);
+		edges.add(lane);
+
+		laneId = String.format("Lane_%d_%d", dest, source);
+		lane = new Edge(laneId, nodes.get(dest), nodes.get(source), cost);
+		edges.add(lane);
+	}
+	
 	/* -------------------------------------------------------------------- */
 	
 	/* Tasking this was interesting but didn't save a significant amount of 
