@@ -3,7 +3,7 @@
  * 
  * http://www.vogella.com/articles/JavaAlgorithmsDijkstra/article.html
  * 
- * Version 1.1 - Copyright © 2009, 2010, 2011, 2011 Lars Vogel
+ * Version 1.1 - Copyright ï¿½ 2009, 2010, 2011, 2011 Lars Vogel
  * 
  * MODIFIED BY Gregory Norton to address performance concerns and eliminate
  * requirement to store nodes external to the object.
