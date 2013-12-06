@@ -34,6 +34,11 @@ public class Graph {
 		this.vertexes = vertexes;
 		this.edges = edges;		
 	}
+	
+	public Graph(Graph other) {
+		this.vertexes = new ArrayList<Vertex>(other.vertexes);
+		this.edges = new ArrayList<Edge>(other.edges);
+	}
 
 	public List<Vertex> getVertexes() {
 		return vertexes;

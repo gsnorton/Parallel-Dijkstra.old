@@ -10,6 +10,9 @@
 
 package dijkstra.model;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class Vertex {
 	
 	final private String id;
@@ -20,6 +23,18 @@ public class Vertex {
 
 	public String getId() {
 		return id;
+	}
+	
+	static final private Pattern int_pattern = Pattern.compile("\\d+");
+	
+	public int getIdInteger() {
+		int id_int = -1;
+		
+		Matcher matcher = int_pattern.matcher(id);
+		if(matcher.find())
+			id_int = Integer.valueOf(matcher.group());
+			
+		return id_int;
 	}
 
 	@Override
