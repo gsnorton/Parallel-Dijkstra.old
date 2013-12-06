@@ -51,22 +51,42 @@ public class DijkstraAlgorithm {
 
 	private Queue<UnsettledNode> unsettled_nodes_queue;
 	private Map<Vertex, Integer> distances_from_source;
-	private Set<Vertex> settledNodes;
+	
+	private Set<Vertex> settledNodes = new HashSet<Vertex>();
 	
 	public DijkstraAlgorithm(final Graph graph) {
 		nodes = new ArrayList<Vertex>(graph.getVertexes());
 		adjacencies = new HashMap<Vertex, List<Edge>>(graph.getAdjacencies());	
 	}
-
+	
+	public DijkstraAlgorithm(final DijkstraAlgorithm other) {
+		nodes = new ArrayList<Vertex>(other.nodes);
+		adjacencies = new HashMap<Vertex, List<Edge>>(other.adjacencies);
+	}
+	
+	public void avoidNode(final int node_num) {
+		Vertex node = nodes.get(node_num);
+		System.out.println("REMOVING " + node);
+		for(Vertex neighbor : getNeighbors(node)) {
+			List<Edge> edges = adjacencies.get(neighbor);
+			List<Edge> new_edges = new ArrayList<Edge>(edges.size());
+			for(Edge edge : edges) 
+				if(edge.getDestination() != node)
+					new_edges.add(edge);
+			adjacencies.put(neighbor, new_edges);
+		}
+	}
+	
 	public void execute(final Vertex source) {
 		predecessors = new HashMap<Vertex, Vertex>();
 		
 		unsettled_nodes_queue = new PriorityQueue<UnsettledNode>();
 		distances_from_source = new HashMap<Vertex, Integer>();
-		settledNodes = new HashSet<Vertex>();
 
 		unsettled_nodes_queue.add(new UnsettledNode(0, source));
 		distances_from_source.put(source, 0);
+		
+		settledNodes.clear();
 		
 		while(false == unsettled_nodes_queue.isEmpty()) {
 			UnsettledNode us_node = unsettled_nodes_queue.poll();
@@ -77,7 +97,7 @@ public class DijkstraAlgorithm {
 	}
 	
 	public void execute(final int node_num) {
-		execute(nodes.get(node_num));
+		this.execute(nodes.get(node_num));
 	}
 
 	private void findMinimalDistances(final Vertex node) {
