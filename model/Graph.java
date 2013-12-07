@@ -41,11 +41,11 @@ public class Graph {
 	}
 
 	public List<Vertex> getVertexes() {
-		return vertexes;
+		return Collections.unmodifiableList(vertexes);
 	}
 
 	public List<Edge> getEdges() {
-		return edges;
+		return Collections.unmodifiableList(edges);
 	}
 	
 	public static final void addLane(List<Edge> edges, final List<Vertex> nodes, 
