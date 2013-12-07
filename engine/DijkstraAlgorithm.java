@@ -64,9 +64,9 @@ public class DijkstraAlgorithm {
 		adjacencies = new HashMap<Vertex, List<Edge>>(other.adjacencies);
 	}
 	
-	public void avoidNode(final int node_num) {
+	public void removeNode(final int node_num) {
+		// System.out.println("REMOVING " + node_num);
 		Vertex node = nodes.get(node_num);
-		// System.out.println("REMOVING " + node);
 		for(Vertex neighbor : getNeighbors(node)) {
 			List<Edge> edges = adjacencies.get(neighbor);
 			List<Edge> new_edges = new ArrayList<Edge>(edges.size());
