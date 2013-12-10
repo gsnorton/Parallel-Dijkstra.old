@@ -27,7 +27,7 @@ import dijkstra.model.Edge;
 import dijkstra.model.Graph;
 import dijkstra.model.Vertex;
 
-public class TestDijkstraAlgorithm {
+public class GridTest {
 
 	private List<Vertex> nodes;
 	private List<Edge> edges;
