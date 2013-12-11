@@ -1,6 +1,11 @@
 /*
- * H/T: Generation of Wumpus maze isased on ideas presented in 
- * Conrad Barski's "Land of Lisp". Copyright (C) 2011.
+ * Test Dijkstra's Algorithm modules using a maze like the one generated for
+ * "Hunt the Wumpus".
+ */
+
+/*
+ * H/T: Generation of Wumpus maze is based on ideas presented in the "Grand 
+ * Theft Wumpus" chapter of Conrad Barski's "Land of Lisp". Copyright (C) 2011.
  * 
  */
 
@@ -39,11 +44,11 @@ public class WumpusTest {
 		
 		Graph graph = new Graph(nodes, edges);
 		
-//		DijkstraAlgorithm dijkstra = 
-//				new DijkstraAlgorithm(graph);
+		DijkstraAlgorithm dijkstra = 
+				new DijkstraAlgorithm(graph);
 		
-		ParallelDijkstraAlgorithm dijkstra = 
-			new ParallelDijkstraAlgorithm(graph);
+//		ParallelDijkstraAlgorithm dijkstra = 
+//			new ParallelDijkstraAlgorithm(graph);
 		
 		int source = 0, start = 0;
 		

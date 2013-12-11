@@ -47,7 +47,7 @@ import dijkstra.model.Vertex;
 
 public class ParallelDijkstraAlgorithm {
 	
-	private static final int MAX_PROCESSING_SPLIT_COUNT = 0;
+	private static final int MAX_PROCESSING_SPLIT_COUNT = 2;
 	
 	private Set<Vertex> settled_nodes;
 	private Map<Vertex, Vertex> predecessors;
