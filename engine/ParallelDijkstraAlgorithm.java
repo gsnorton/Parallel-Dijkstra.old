@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
@@ -41,6 +40,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import jsr166y.ForkJoinPool;
 import jsr166y.RecursiveAction;
+
 import dijkstra.model.Edge;
 import dijkstra.model.Graph;
 import dijkstra.model.Vertex;
@@ -68,6 +68,10 @@ public class ParallelDijkstraAlgorithm {
 		@Override
 		public int compareTo(final UnsettledNode other) {
 			return (distance - other.distance);
+		}
+		
+		public boolean isFartherAwayThan(final UnsettledNode other) {
+			return (this.compareTo(other) > 0);
 		}
 	}
 	
@@ -100,6 +104,10 @@ public class ParallelDijkstraAlgorithm {
 		
 		boolean leaf_task = true;
 		
+		public ProcessingTask(final Map<Vertex, List<Edge>> adjacencies) {
+			this(adjacencies, 0);
+		}
+		
 		public ProcessingTask(final Map<Vertex, List<Edge>> adjacencies,
 				final int level) {
 
@@ -128,12 +136,12 @@ public class ParallelDijkstraAlgorithm {
 						new CyclicBarrier(leaf_processing_task_count,
 								query_tasks_for_winner);
 				
-				reexecute_task_barrier = 
-						new CyclicBarrier(leaf_processing_task_count + 1);
-				
 				leaves_done_barrier =
 						new CyclicBarrier(leaf_processing_task_count,
 								signal_leaves_done);
+				
+				reexecute_task_barrier = 
+						new CyclicBarrier(leaf_processing_task_count + 1);
 			}
 			
 			processing_tasks.add(this);
@@ -142,6 +150,12 @@ public class ParallelDijkstraAlgorithm {
 		/* ---------------------------------------------------------------- */
 
 		public void setSource(final Vertex source) {
+			
+			/* This method is called *once* in the root processing node. The
+			 * routine sets the first winner (the source) and adds the
+			 * node to the settled list.
+			 */
+			
 			UnsettledNode us_node = new UnsettledNode(0, source, null);
 			winner = us_node;
 			
@@ -167,6 +181,10 @@ public class ParallelDijkstraAlgorithm {
 		}
 		
 		private Runnable query_tasks_for_winner = new Runnable() {
+			
+			/* Called once per round as part of the functionality of 
+			 * processing_task_barrier. */
+			
 			public void run() {
 				queryTasksForWinner();
 			}
@@ -184,7 +202,7 @@ public class ParallelDijkstraAlgorithm {
 					continue;
 
 				if ((null == potential_winner)
-						|| (potential_winner.compareTo(us_node) > 0))
+						|| potential_winner.isFartherAwayThan(us_node))
 					potential_winner = us_node;
 								
 				global_new_unsettled_nodes.addAll(pt.new_unsettled_nodes);
@@ -208,9 +226,8 @@ public class ParallelDijkstraAlgorithm {
 			else if (winner == unsettled_nodes_queue.peek())
 				unsettled_nodes_queue.poll();
 			
-			if(global_new_unsettled_nodes != null)
-				for(UnsettledNode us_node : global_new_unsettled_nodes)
-					distances_from_source.put(us_node.node, us_node.distance);
+			for(UnsettledNode us_node : global_new_unsettled_nodes)
+				distances_from_source.put(us_node.node, us_node.distance);
 		}
 		
 		private void reset(final Vertex node) {
@@ -221,7 +238,7 @@ public class ParallelDijkstraAlgorithm {
 		
 		/* ---------------------------------------------------------------- */
 		
-		boolean is_active;
+		private boolean is_active;
 		
 		@Override
 		public void compute() {
@@ -299,6 +316,10 @@ public class ParallelDijkstraAlgorithm {
 		}
 		
 		private Runnable signal_leaves_done = new Runnable() {
+			
+			/* Called once per round as part of the functionality of 
+			 * leaves_done_barrier. */
+			
 			public void run() {
 				try {
 					notify_queue.put(1);
@@ -368,7 +389,7 @@ public class ParallelDijkstraAlgorithm {
 		global_new_unsettled_nodes = new ArrayList<UnsettledNode>();
 		
 		processing_tasks = new ArrayList<ProcessingTask>();
-		root_processing_task = new ProcessingTask(graph.getAdjacencies(), 0);
+		root_processing_task = new ProcessingTask(graph.getAdjacencies());
 		
 		notify_queue = new LinkedBlockingQueue<Integer>();
 	}
